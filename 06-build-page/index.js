@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-// подготовила папку 'project-dist'
+// подготовила папку project-dist
 const pathToProjectDist = path.join(__dirname, 'project-dist');
 
 fs.rm(pathToProjectDist, {force: true, recursive: true}, (err) => {
@@ -15,7 +15,7 @@ fs.rm(pathToProjectDist, {force: true, recursive: true}, (err) => {
   });
 });
 
-// сохранила текстовое содержимое файла 'template.html' в textFromTemplate
+// сохранила текстовое содержимое файла template.html в textFromTemplate
 const pathToTemplateFile = path.join(__dirname, 'template.html');
 let textFromTemplateFile;
 
@@ -29,7 +29,7 @@ fs.readFile(pathToTemplateFile, (err, data) => {
 // создала объект, ключи которого имена файлов-компонент (articles, footer, header)
 // а значение - строки разметки
 // прочитала содержимое файлов-компонент и записала содержимое в объект
-// далее заменила {шаблоны} из компонент на разметку
+// далее заменила {{шаблоны}} из компонент на разметку
 const pathToComponentsDir = path.join(__dirname, 'components');
 const pathToIndexFile = path.join(pathToProjectDist, 'index.html');
 let componentsObj = {};
@@ -84,7 +84,7 @@ fs.readdir(pathToStylesDir, {withFileTypes: true}, (err, files) => {
   });
 });
 
-// использовала задачу '04-copy-directory'
+// работаю с assets
 const pathToAssetsDir = path.join(__dirname, 'assets');
 const pathToCopyAssetsDir = path.join(pathToProjectDist, 'assets');
 
@@ -100,6 +100,7 @@ fs.rm(pathToCopyAssetsDir, {force: true, recursive: true}, (err) => {
   });
 });
 
+// создала структуру папок внутри assets
 fs.readdir(pathToAssetsDir, {withFileTypes: true}, (err, items) => {
   if (err) {
     console.log(err);
@@ -110,16 +111,21 @@ fs.readdir(pathToAssetsDir, {withFileTypes: true}, (err, items) => {
         console.log(err);
       }
     });
-
-    fs.readdir(path.join(pathToCopyAssetsDir, item.name), (err, files) => {
+    // не использовала функцию из задачи '04-copy-directory'
+    fs.readdir(path.join(pathToAssetsDir, item.name), (err, files) => {
       if (err) {
-        console.log(err);
+      console.log(err);
       }
       files.forEach(file => {
-        fs.copyFile(path.join(pathToAssetsDir, item.name, file), path.join(pathToCopyAssetsDir, item.name, file), (err) => {
+        fs.readFile(path.join(pathToAssetsDir, item.name, file), (err, data) => {
           if (err) {
             console.log(err);
           }
+          fs.writeFile(path.join(pathToCopyAssetsDir, item.name, file), data, (err) => {
+            if (err) {
+              console.log(err);
+            }
+          });
         });
       });
     });
