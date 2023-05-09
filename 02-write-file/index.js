@@ -14,6 +14,10 @@ process.stdin.on('data', data => {
   stream.write(data);
 });
 
+process.on('SIGINT', () => {
+  toCloseApp();
+});
+
 const toCloseApp = function() {
   process.stdout.write('Текст записан. Пока!');
   process.exit();

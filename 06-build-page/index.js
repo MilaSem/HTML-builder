@@ -1,133 +1,67 @@
-const fs = require('fs');
+const fsPromises = require('fs/promises');
 const path = require('path');
 
-// подготовила папку project-dist
 const pathToProjectDist = path.join(__dirname, 'project-dist');
+const pathToTemplateFile = path.join(__dirname, 'template.html');
+const pathToComponentsDir = path.join(__dirname, 'components');
+const pathToIndexFile = path.join(pathToProjectDist, 'index.html');
+const pathToStylesDir = path.join(__dirname, 'styles');
+const pathToStyleFile = path.join(pathToProjectDist, 'style.css');
+const pathToAssetsDir = path.join(__dirname, 'assets');
+const pathToCopyAssetsDir = path.join(pathToProjectDist, 'assets');
 
-fs.rm(pathToProjectDist, {force: true, recursive: true}, (err) => {
-  if (err) {
-    console.log(err);
-  }
-  fs.mkdir(pathToProjectDist, {recursive: true}, (err) => {
-    if (err) {
-      console.log(err);
+// функция для создания папки assets и вложенных папок (вызывается рекурсивно)
+async function copyAssets(srcPath, destPath) {
+  await fsPromises.rm(destPath, {force: true, recursive: true});
+  await fsPromises.mkdir(destPath, {recursive: true});
+  const assets = await fsPromises.readdir(srcPath, {withFileTypes: true});
+  for (const asset of assets) {
+    if (asset.isDirectory()) {
+      await copyAssets(path.join(srcPath, asset.name), path.join(destPath, asset.name));
+    } else {
+      await fsPromises.copyFile(path.join(srcPath, asset.name), path.join(destPath, asset.name));
     }
-    // сохранила текстовое содержимое файла template.html в textFromTemplate
-    const pathToTemplateFile = path.join(__dirname, 'template.html');
-    let textFromTemplateFile;
+  }
+}
 
-    fs.readFile(pathToTemplateFile, (err, data) => {
-      if (err) {
-        console.log(err);
-      }
-      textFromTemplateFile = data.toString();
-    });
-
-    // создала объект, ключи которого имена файлов-компонент (articles, footer, header)
-    // а значение - строки разметки
-    // прочитала содержимое файлов-компонент и записала содержимое в объект
-    // далее заменила {{шаблоны}} из компонент на разметку
-    const pathToComponentsDir = path.join(__dirname, 'components');
-    const pathToIndexFile = path.join(pathToProjectDist, 'index.html');
-    let componentsObj = {};
-
-    fs.readdir(pathToComponentsDir, {withFileTypes: true}, (err, files) => {
-      if (err) {
-        console.log(err);
-      }
-      files.forEach(file => {
-        let partsFileName = file.name.split('.');
+async function main() {
+  try {
+    // создаю папку для проекта
+    await fsPromises.rm(pathToProjectDist, {force: true, recursive: true});
+    await fsPromises.mkdir(pathToProjectDist, {recursive: true});
+    // в объекте храню компоненты ('название тега': 'разметка')
+    // заменяю шаблоны в html на соответствующие компоненты
+    let textFromTemplateFile = await fsPromises.readFile(pathToTemplateFile, {encoding: 'utf8'});
+    const componentsObj = {};
+    const files = await fsPromises.readdir(pathToComponentsDir, {withFileTypes: true});
+    for (const file of files) {
+      if (file.isFile()) {
+        const partsFileName = file.name.split('.');
         if (partsFileName[1] === 'html') {
-          fs.readFile(path.join(pathToComponentsDir, file.name), (err, data) => {
-            if (err) {
-              console.log(err);
-            }
-            componentsObj[partsFileName[0]] = data.toString();
-      
-            textFromTemplateFile = textFromTemplateFile.replace(`{{${partsFileName[0]}}}`, componentsObj[partsFileName[0]]); // '{{' так написано в файле template.html
-      
-            fs.writeFile(pathToIndexFile, textFromTemplateFile, (err) => {
-              if (err) {
-                console.log(err);
-              }
-            });
-          });
+          componentsObj[partsFileName[0]] = await fsPromises.readFile(path.join(pathToComponentsDir, file.name), {encoding: 'utf8'});
+          textFromTemplateFile = textFromTemplateFile.replace(`{{${partsFileName[0]}}}`, componentsObj[partsFileName[0]]);
         }
-      });
-    });
-
-    // собрала стили как в задаче '05-merge-styles'
-    const pathToStylesDir = path.join(__dirname, 'styles');
-    const pathToStyleFile = path.join(pathToProjectDist, 'style.css');
-
-    fs.readdir(pathToStylesDir, {withFileTypes: true}, (err, files) => {
-      if (err) {
-        console.log(err);
       }
-      files.forEach(file => {
-        let fileName = file.name.split('.');
-        if ((file.isFile()) && (fileName[1] === 'css')) {
-          fs.readFile(path.join(pathToStylesDir, file.name), (err, data) => {
-            if (err) {
-              console.log(err);
-            }
-            fs.appendFile(pathToStyleFile, data, (err) => {
-              if (err) {
-                console.log(err);
-              }          
-            });
-          });
+    }
+    // пишу компоненты в файл index.html
+    await fsPromises.writeFile(pathToIndexFile, textFromTemplateFile);
+    // объединяю стили
+    const styles = await fsPromises.readdir(pathToStylesDir, {withFileTypes: true});
+    for (const style of styles) {
+      if (style.isFile()) {
+        const styleFileName = style.name.split('.');
+        if (styleFileName[1] === 'css') {
+          const styleComponent = await fsPromises.readFile(path.join(pathToStylesDir, style.name), {encoding: 'utf8'});
+          await fsPromises.appendFile(pathToStyleFile, styleComponent);
         }
-      });
-    });
-
-    // работаю с assets
-    const pathToAssetsDir = path.join(__dirname, 'assets');
-    const pathToCopyAssetsDir = path.join(pathToProjectDist, 'assets');
-
-    // создала папку project-dist/assets
-    fs.rm(pathToCopyAssetsDir, {force: true, recursive: true}, (err) => {
-      if (err) {
-        console.log(err);
       }
-      fs.mkdir(pathToCopyAssetsDir, {recursive: true}, (err) =>{
-        if (err) {
-          console.log(err);
-        }
-      });
-    });
+    }
+    // копирую папку assets и вложенные папки
+    await copyAssets(pathToAssetsDir, pathToCopyAssetsDir);
 
-    // создала структуру папок внутри assets
-    fs.readdir(pathToAssetsDir, {withFileTypes: true}, (err, items) => {
-      if (err) {
-        console.log(err);
-      }
-      items.forEach(item => {
-        fs.mkdir(path.join(pathToCopyAssetsDir, item.name), {recursive: true}, (err) =>{
-          if (err) {
-            console.log(err);
-          }
-        });
-        // не использовала функцию из задачи '04-copy-directory'
-        fs.readdir(path.join(pathToAssetsDir, item.name), (err, files) => {
-          if (err) {
-          console.log(err);
-          }
-          files.forEach(file => {
-            fs.readFile(path.join(pathToAssetsDir, item.name, file), (err, data) => {
-              if (err) {
-                console.log(err);
-              }
-              fs.writeFile(path.join(pathToCopyAssetsDir, item.name, file), data, (err) => {
-                if (err) {
-                  console.log(err);
-                }
-              });
-            });
-          });
-        });
-      });
-    });
+  } catch(err) {
+    console.error(err.message);
+  }
+}
 
-  });
-});
+main();
