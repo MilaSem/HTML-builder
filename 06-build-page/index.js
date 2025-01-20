@@ -63,7 +63,7 @@ const buildProject = async () => {
     });
     const components = await readFilesWithExt(pathToComponentsDir, ".html");
     components.forEach((component) => {
-      textFromTemplateFile = textFromTemplateFile.replace(
+      textFromTemplateFile = textFromTemplateFile.replaceAll(
         `{{${component.name}}}`,
         component.content
       );
