@@ -1,34 +1,31 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("node:fs/promises");
+const path = require("path");
 
-const pathToOriginDir = path.join(__dirname, 'files');
-const pathToCopyDir = path.join(__dirname, 'files-copy');
+const { stdout, stderr } = process;
 
-function copyDir() {
-  fs.rm(pathToCopyDir, {force: true, recursive: true}, (err) => {
-    if (err) {
-      console.log(err);
-    }
-    fs.mkdir(pathToCopyDir, {recursive: true}, (err) =>{
-      if (err) {
-        console.log(err);
-      }
-      fs.readdir(pathToOriginDir, (err, files) => {
-        if (err) {
-          console.log(err);
-        }
-        files.forEach(file => {
-          fs.copyFile(path.join(pathToOriginDir, file), path.join(pathToCopyDir, file), (err) => {
-            if (err) {
-              console.log(err);
-            }
-          });
-        });
-      })
-    });
-  });
-}
+const pathToOriginDir = path.join(__dirname, "files");
+const pathToCopyDir = path.join(__dirname, "files-copy");
+
+const copyDir = async () => {
+  try {
+    await fs.rm(pathToCopyDir, { force: true, recursive: true });
+    await fs.mkdir(pathToCopyDir, { recursive: true });
+
+    const files = await fs.readdir(pathToOriginDir);
+
+    await Promise.all(
+      files.map((file) =>
+        fs.copyFile(
+          path.join(pathToOriginDir, file),
+          path.join(pathToCopyDir, file)
+        )
+      )
+    );
+
+    stdout.write("File copying completed\n");
+  } catch (err) {
+    stderr.write(`Error ${err.message}\n`);
+  }
+};
 
 copyDir();
-console.log('Копирование файлов завершено');
-
