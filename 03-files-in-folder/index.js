@@ -1,25 +1,33 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require("node:fs/promises");
+const path = require("path");
 
-const dirLocation = path.join(__dirname, 'secret-folder');
+const { stdout, stderr } = process;
 
-fs.readdir(dirLocation, {withFileTypes: true}, toGiveOutInfo);
+const dirLocation = path.join(__dirname, "secret-folder");
 
-function toGiveOutInfo(err, files) {
-  if (err) {
-    console.log(err);
-  } else {
-    files.forEach(file => {
+const getFileInfo = async () => {
+  try {
+    const files = await fs.readdir(dirLocation, { withFileTypes: true });
+
+    for (const file of files) {
       if (file.isFile()) {
-        let fileName = file.name.split('.'); // так показалось проще, чем path.extname
-        fs.stat(path.join(dirLocation, file.name), (err, stats) => {
-          if (err) {
-            console.log(err);
-          } else {
-            console.log(fileName[0] + ' - ' + fileName[1] + ' - ' + stats.size + 'b');
-          }
-        });
+        await processFile(file);
       }
-    });
+    }
+  } catch (err) {
+    stderr.write(`Error ${err.message}\n`);
   }
-}
+};
+
+const processFile = async (file) => {
+  const filePath = path.join(dirLocation, file.name);
+  const stats = await fs.stat(filePath);
+  const fileExtention = path.extname(file.name).slice(1);
+  const fileName = path.basename(file.name, `.${fileExtention}`);
+
+  const output = `${fileName} - ${fileExtention} - ${stats.size}b\n`;
+
+  stdout.write(output);
+};
+
+getFileInfo();
