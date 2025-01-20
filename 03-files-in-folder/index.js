@@ -22,10 +22,10 @@ const getFileInfo = async () => {
 const processFile = async (file) => {
   const filePath = path.join(dirLocation, file.name);
   const stats = await fs.stat(filePath);
-  const fileExtention = path.extname(file.name).slice(1);
-  const fileName = path.basename(file.name, `.${fileExtention}`);
+  const fileExtension = path.extname(file.name).slice(1);
+  const fileName = path.basename(file.name, `.${fileExtension}`);
 
-  const output = `${fileName} - ${fileExtention} - ${stats.size}b\n`;
+  const output = `${fileName} - ${fileExtension} - ${stats.size}b\n`;
 
   stdout.write(output);
 };
